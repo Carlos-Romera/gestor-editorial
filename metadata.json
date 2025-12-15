@@ -1,0 +1,5 @@
+{
+  "name": "Gestor Editorial McGraw",
+  "description": "Aplicación para gestión de flujo de trabajo editorial (Proyectos, Unidades, Rondas) conectada a Google Sheets.",
+  "requestFramePermissions": []
+}
