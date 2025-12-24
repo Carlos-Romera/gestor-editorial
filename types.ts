@@ -44,8 +44,8 @@ export interface Unidad {
 export interface Ronda {
   ID_RONDA: string;
   ID_UNIDAD: string;
-  TIPO_RONDA: string; // Puede ser un valor de TipoRonda o texto libre si es Menor
-  CATEGORIA: string;  // 'Mayor' o 'Menor'
+  TIPO_RONDA: string;
+  CATEGORIA: string;
   FECHA_RECEPCION: string;
   FECHA_LIMITE: string;
   ESTADO: string;
@@ -53,14 +53,14 @@ export interface Ronda {
   COMENTARIOS: string;
 }
 
-// Data structure returned by the backend
 export interface AppData {
   proyectos: Proyecto[];
   unidades: Unidad[];
   rondas: Ronda[];
   spreadsheetUrl?: string;
   spreadsheetName?: string;
-  spreadsheetId?: string; // Para verificar que es la hoja correcta
+  spreadsheetId?: string;
+  lastUpdated?: string; // Nuevo: rastreo de sincronización
 }
 
 export interface ApiConfig {

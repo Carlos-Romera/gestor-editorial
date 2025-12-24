@@ -3,7 +3,7 @@
 // 2. Asegúrate de configurar el acceso como: "Cualquier persona" (Anyone).
 // 3. Pega la URL que te da Google (termina en /exec) dentro de las comillas abajo.
 
-export const GOOGLE_SCRIPT_URL: string = "https://script.google.com/macros/s/AKfycbwhD_fiViUDZzjcmBYdF-P8ffI6vizS3btU8IsyRk8nJOKRD1I2laW7iOFag0vThAMD/exec"; 
+export const GOOGLE_SCRIPT_URL: string = "https://script.google.com/macros/s/AKfycbxIS9oCeZ1FXj69MibcxhIp-p9q7tN9xvBfl7sqAS_3bg0UYli6tJ4xad_qzOysgz0R/exec"; 
 
 // EJEMPLO: export const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzW84eqimpk-7dA3kNaWcvO6jEBIkcx-EEiPjPRjCn7zB5JhxGuNSJFFriA_lTSVSA/exec";
 
