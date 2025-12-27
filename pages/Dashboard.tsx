@@ -1,7 +1,6 @@
-
 import React from 'react';
-import { AppData, EstadoRonda, CategoriaRonda } from '../types';
-import { IS_DEMO_MODE } from '../constants';
+import { AppData } from '../types';
+import { APP_VERSION } from '../constants';
 
 interface DashboardProps {
   data: AppData;
@@ -9,120 +8,130 @@ interface DashboardProps {
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ data, onRefresh }) => {
-  const getUnidad = (id: string) => data.unidades.find(u => u.ID_UNIDAD === id);
-  const getProyecto = (idUnidad: string) => {
-    const unidad = getUnidad(idUnidad);
-    return unidad ? data.proyectos.find(p => p.ID_PROYECTO === unidad.ID_PROYECTO) : undefined;
+  const getUnidad = (id: any) => {
+    if (!id) return undefined;
+    const cleanId = String(id).trim();
+    return data.unidades.find(u => String(u.ID_UNIDAD).trim() === cleanId);
   };
 
-  const activeRounds = data.rondas
-    .filter(r => r.ESTADO !== EstadoRonda.ENTREGADA)
+  const getProyecto = (idUnidad: string) => {
+    const unidad = getUnidad(idUnidad);
+    if (!unidad) return undefined;
+    return data.proyectos.find(p => p.ID_PROYECTO === unidad.ID_PROYECTO);
+  };
+
+  const activeRounds = (data.rondas || [])
+    .filter(r => {
+      const unit = getUnidad(r.ID_UNIDAD);
+      if (!unit) return false;
+      return String(r.ESTADO || '').toUpperCase().trim() !== 'ENTREGADA';
+    })
     .sort((a, b) => new Date(a.FECHA_LIMITE).getTime() - new Date(b.FECHA_LIMITE).getTime());
 
-  const getUrgencyColor = (dateString: string) => {
+  const getUrgencyStyles = (dateString: string) => {
     const today = new Date();
+    today.setHours(0,0,0,0);
     const deadline = new Date(dateString);
     const diffDays = Math.ceil((deadline.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    if (diffDays < 1) return 'bg-red-100 text-red-800 border-red-200';
-    if (diffDays <= 3) return 'bg-amber-100 text-amber-800 border-amber-200';
-    return 'bg-blue-50 text-blue-700 border-blue-100';
+    
+    if (diffDays < 0) return 'bg-app-red-bg text-app-red-text border-app-red-text/20 shadow-red-100';
+    if (diffDays <= 2) return 'bg-app-yellow-bg text-app-yellow-text border-app-yellow-text/20 shadow-orange-100';
+    return 'bg-app-accent-blue/30 text-app-primary border-app-primary/20 shadow-blue-50';
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700">
-      {/* HEADER DE BASE DE DATOS */}
-      <div className="flex flex-col md:flex-row justify-between md:items-end gap-6">
+    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-1000 pb-20">
+      <div className="flex flex-col md:flex-row justify-between md:items-center gap-6">
         <div>
-           <h2 className="text-4xl font-black text-slate-900 tracking-tighter">Panel de Control</h2>
-           <div className="flex items-center gap-3 mt-2">
-             <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400">
-               <span className="w-2 h-2 rounded-full bg-green-500"></span>
-               Sincronizado con Google Sheets
-             </span>
-             {data.lastUpdated && (
-               <span className="text-[10px] text-slate-300 font-bold">
-                 Último pulso: {new Date(data.lastUpdated).toLocaleTimeString()}
-               </span>
-             )}
+           <h2 className="text-6xl font-extralight text-app-text-main tracking-tighter">Dashboard</h2>
+           <div className="flex items-center gap-2 mt-4">
+             <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-app-text-sub/10 rounded-full shadow-sm">
+                <span className="w-2 h-2 rounded-full bg-app-primary animate-pulse"></span>
+                <span className="text-[10px] text-app-text-sub font-black uppercase tracking-[0.1em]">PLATINUM v{APP_VERSION}</span>
+             </div>
+             <span className="text-[10px] text-app-text-sub font-bold uppercase tracking-[0.2em] ml-3">Centro de Operaciones Cloud</span>
            </div>
         </div>
-        <button onClick={onRefresh} className="bg-white border border-slate-200 text-slate-700 px-6 py-3 rounded-2xl text-xs font-black hover:bg-slate-50 transition-all shadow-sm active:scale-95 flex items-center gap-2">
-          🔄 Refrescar Datos
+        <button 
+          onClick={onRefresh} 
+          className="group flex items-center gap-4 bg-app-sidebar text-white px-10 py-5 rounded-[1.5rem] text-[10px] font-black uppercase tracking-[0.2em] hover:bg-app-primary transition-all shadow-xl shadow-app-sidebar/10 active:scale-95"
+        >
+          <svg className="w-4 h-4 group-hover:rotate-180 transition-transform duration-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+          Sincronizar Datos
         </button>
       </div>
 
-      {/* ESTADÍSTICAS DE LA DB */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
-          <div className="text-3xl font-black text-slate-900">{data.proyectos.length}</div>
-          <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Proyectos Totales</div>
-        </div>
-        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
-          <div className="text-3xl font-black text-slate-900">{data.unidades.length}</div>
-          <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Unidades en DB</div>
-        </div>
-        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm ring-2 ring-red-500/5">
-          <div className="text-3xl font-black text-red-600">
-            {activeRounds.filter(r => getUrgencyColor(r.FECHA_LIMITE).includes('red')).length}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+        {[
+          { label: 'Libros', val: data.proyectos.length, sub: 'Proyectos Activos', color: 'bg-white text-app-text-main border-app-text-sub/10' },
+          { label: 'Unidades', val: data.unidades.length, sub: 'Módulos Totales', color: 'bg-white text-app-text-main border-app-text-sub/10' },
+          { label: 'Urgentes', val: activeRounds.filter(r => getUrgencyStyles(r.FECHA_LIMITE).includes('red')).length, sub: 'Fuera de plazo', color: 'bg-app-red-bg text-app-red-text border-app-red-text/10' },
+          { label: 'Pendientes', val: activeRounds.length, sub: 'Tareas activas', color: 'bg-app-accent-blue/30 text-app-primary border-app-primary/10' }
+        ].map((stat, i) => (
+          <div key={i} className={`${stat.color} p-10 rounded-[2.5rem] border shadow-sm transition-all hover:shadow-xl hover:-translate-y-1 group relative overflow-hidden`}>
+            <div className="text-6xl font-light tracking-tighter mb-2 relative z-10">{stat.val}</div>
+            <div className="text-[11px] font-black uppercase tracking-[0.3em] opacity-70 relative z-10">{stat.label}</div>
+            <div className="text-[10px] font-medium uppercase tracking-widest opacity-40 mt-1 relative z-10">{stat.sub}</div>
           </div>
-          <div className="text-[10px] font-black text-red-400 uppercase tracking-widest mt-1">Urgentes Hoy</div>
-        </div>
-        <div className="bg-accent p-6 rounded-3xl shadow-xl shadow-blue-100">
-          <div className="text-3xl font-black text-white">{activeRounds.length}</div>
-          <div className="text-[10px] font-black text-blue-100 uppercase tracking-widest mt-1">Tareas Pendientes</div>
-        </div>
+        ))}
       </div>
 
-      {/* LISTADO DE ENTREGAS */}
-      <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
-        <div className="px-8 py-6 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
-          <h3 className="text-lg font-black text-slate-800">Próximas Entregas</h3>
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ordenado por fecha</span>
+      <div className="bg-white rounded-[3rem] shadow-xl shadow-app-sidebar/5 border border-app-text-sub/5 overflow-hidden">
+        <div className="px-12 py-12 border-b border-app-text-sub/5 flex justify-between items-center bg-app-bg/10">
+          <div>
+            <h3 className="text-[10px] font-black text-app-text-sub uppercase tracking-[0.4em]">Próximas Entregas</h3>
+            <p className="text-xl font-light text-app-text-main mt-1">Prioridad por calendario editorial</p>
+          </div>
+          <span className="px-6 py-2 bg-app-primary/5 text-app-primary border border-app-primary/10 rounded-xl text-[10px] font-black tracking-widest uppercase">
+            {activeRounds.length} TAREAS EN CURSO
+          </span>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full">
             <thead>
-              <tr className="text-left border-b border-slate-50">
-                <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Fecha Límite</th>
-                <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Unidad / Proyecto</th>
-                <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Prueba</th>
-                <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Estado</th>
+              <tr className="text-left bg-app-bg/20">
+                <th className="px-12 py-6 text-[9px] font-black text-app-text-sub uppercase tracking-[0.3em]">Límite</th>
+                <th className="px-12 py-6 text-[9px] font-black text-app-text-sub uppercase tracking-[0.3em]">Unidad y Proyecto</th>
+                <th className="px-12 py-6 text-[9px] font-black text-app-text-sub uppercase tracking-[0.3em]">Fase</th>
+                <th className="px-12 py-6 text-[9px] font-black text-app-text-sub uppercase tracking-[0.3em] text-right">Situación</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody className="divide-y divide-app-text-sub/5">
               {activeRounds.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-8 py-20 text-center">
-                    <div className="text-4xl mb-4">✨</div>
-                    <div className="text-slate-400 font-bold italic">No hay entregas pendientes en la base de datos.</div>
-                  </td>
+                  <td colSpan={4} className="px-12 py-32 text-center opacity-30 text-app-text-main text-[11px] font-black uppercase tracking-[0.4em]">Sin entregas pendientes</td>
                 </tr>
               ) : (
                 activeRounds.map(ronda => {
                   const unidad = getUnidad(ronda.ID_UNIDAD);
+                  if (!unidad) return null;
                   const proyecto = getProyecto(ronda.ID_UNIDAD);
-                  const isMinor = ronda.CATEGORIA === CategoriaRonda.MENOR;
+                  
                   return (
-                    <tr key={ronda.ID_RONDA} className="hover:bg-slate-50/80 transition-colors group">
-                      <td className="px-8 py-5 whitespace-nowrap">
-                        <span className={`px-3 py-1.5 text-[11px] font-black rounded-xl border ${getUrgencyColor(ronda.FECHA_LIMITE)} shadow-sm`}>
-                          {new Date(ronda.FECHA_LIMITE).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }).toUpperCase()}
-                        </span>
-                      </td>
-                      <td className="px-8 py-5">
-                        <div className="text-sm font-black text-slate-800 group-hover:text-accent transition-colors">{unidad?.CODIGO_UD}</div>
-                        <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{proyecto?.NOMBRE_PROYECTO}</div>
-                      </td>
-                      <td className="px-8 py-5 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                            {isMinor && <span className="text-[9px] text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded font-black uppercase border border-purple-100">Menor</span>}
-                            <span className="text-sm font-bold text-slate-600">{ronda.TIPO_RONDA}</span>
+                    <tr key={ronda.ID_RONDA} className="hover:bg-app-bg/40 transition-all group">
+                      <td className="px-12 py-10 whitespace-nowrap">
+                        <div className={`inline-flex flex-col items-center justify-center w-20 h-20 rounded-[2rem] border ${getUrgencyStyles(ronda.FECHA_LIMITE)} shadow-lg`}>
+                          <span className="text-[9px] font-black uppercase tracking-tight opacity-70">
+                            {new Date(ronda.FECHA_LIMITE).toLocaleDateString('es-ES', { month: 'short' }).replace('.', '')}
+                          </span>
+                          <span className="text-2xl font-light tracking-tighter">
+                            {new Date(ronda.FECHA_LIMITE).getDate()}
+                          </span>
                         </div>
                       </td>
-                      <td className="px-8 py-5 text-right">
-                        <span className="text-[10px] font-black text-amber-600 bg-amber-50 px-3 py-1 rounded-full border border-amber-100 uppercase tracking-tighter">
-                          {ronda.ESTADO}
-                        </span>
+                      <td className="px-12 py-10">
+                        <div className="text-xl font-light text-app-text-main tracking-tight group-hover:text-app-primary transition-colors">{unidad.CODIGO_UD}</div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[10px] text-app-text-sub font-bold uppercase tracking-widest">{proyecto?.NOMBRE_PROYECTO || 'McGraw Hill'}</span>
+                        </div>
+                      </td>
+                      <td className="px-12 py-10">
+                        <span className="text-sm font-medium text-app-text-main/80">{ronda.TIPO_RONDA}</span>
+                      </td>
+                      <td className="px-12 py-10 text-right">
+                        <div className="inline-flex items-center gap-3 bg-white px-5 py-2.5 rounded-xl border border-app-text-sub/5 shadow-sm">
+                           <span className="text-[10px] font-black text-app-text-sub uppercase tracking-widest">{ronda.ESTADO}</span>
+                        </div>
                       </td>
                     </tr>
                   );

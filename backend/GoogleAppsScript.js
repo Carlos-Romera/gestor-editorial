@@ -1,21 +1,11 @@
+
 /**
- * VERSIÓN DEL SCRIPT: 2.1 (Soporte para Categorías de Rondas)
- * 
- * INSTRUCCIONES:
- * 1. Pega tu ID de hoja de cálculo abajo.
- * 2. Guarda.
- * 3. IMPORTANTE: Implementar > Gestionar implementaciones > Editar > NUEVA VERSIÓN > Implementar.
- * 4. NOTA: Añade manualmente la columna 'CATEGORIA' en la hoja 'Rondas' si ya tienes datos creados.
+ * ==========================================================================
+ * BACKEND GESTOR EDITORIAL - VERSIÓN ULTRA-ESTABLE 3.4
+ * ==========================================================================
  */
 
-const SPREADSHEET_ID = 'TU_ID_DE_HOJA_DE_CALCULO_AQUI'; // <--- PEGA TU ID REAL AQUÍ
-
-// Definición de la estructura de la base de datos
-const DB_SCHEMA = {
-  'Proyectos': ['ID_PROYECTO', 'NOMBRE_PROYECTO', 'CLIENTE', 'CAMPANA', 'ESTADO'],
-  'Unidades': ['ID_UNIDAD', 'ID_PROYECTO', 'CODIGO_UD', 'TITULO_UD', 'FECHA_RECEPCION_ORIGINALES', 'FECHA_LIMITE_PRIMERAS', 'NOTAS'],
-  'Rondas': ['ID_RONDA', 'ID_UNIDAD', 'TIPO_RONDA', 'FECHA_RECEPCION', 'FECHA_LIMITE', 'ESTADO', 'ENLACE_ARCHIVO', 'COMENTARIOS', 'CATEGORIA']
-};
+const SPREADSHEET_ID = '1vx-gep3Qf6AIHqo-lNQfd14FBaHB0CjazME3P7cDL8g'; 
 
 function doGet(e) {
   return handleRequest(e);
@@ -26,149 +16,113 @@ function doPost(e) {
 }
 
 function handleRequest(e) {
-  const lock = LockService.getScriptLock();
-  lock.tryLock(30000);
+  // Respuesta rápida para el editor de Google Apps Script
+  if (!e || !e.parameter) {
+    return responseJSON({ 
+      status: 'ok', 
+      message: 'Script Activo v3.4. Motor de base de datos listo.' 
+    });
+  }
 
   try {
-    if (SPREADSHEET_ID === 'TU_ID_DE_HOJA_DE_CALCULO_AQUI' || SPREADSHEET_ID === '') {
-       throw new Error('CONFIG_ERROR: El ID de la hoja sigue siendo el predeterminado. Edita el script y pon tu ID real.');
-    }
-
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-    ensureDbStructure(ss);
-
-    let postData = null;
+    
+    // Procesar acciones de escritura (POST)
     if (e.postData && e.postData.contents) {
-      try {
-        postData = JSON.parse(e.postData.contents);
-      } catch (err) {
-        postData = e.postData.contents; 
-      }
+      const payload = JSON.parse(e.postData.contents);
+      if (payload.action === 'save') return saveData(ss, payload.type, payload.data);
+      if (payload.action === 'delete') return deleteData(ss, payload.type, payload.id);
     }
 
-    if (postData) {
-      if (postData.action === 'save') {
-        const type = postData.type; 
-        const data = postData.data;
-        let sheetName = getSheetNameByType(type);
-        const sheet = ss.getSheetByName(sheetName);
-        if (!sheet) throw new Error(`Tabla no encontrada: ${sheetName}`);
-        
-        const headers = DB_SCHEMA[sheetName];
-        const allValues = sheet.getDataRange().getValues();
-        let rowIndexToUpdate = -1;
-        
-        if (allValues.length > 1) {
-            for (let i = 1; i < allValues.length; i++) {
-              const rowId = allValues[i][0];
-              if (String(rowId) === String(data[headers[0]])) {
-                rowIndexToUpdate = i + 1;
-                break;
-              }
-            }
-        }
+    // Procesar lectura (GET)
+    const data = {
+      proyectos: getSheetData(ss, 'Proyectos'),
+      unidades: getSheetData(ss, 'Unidades'),
+      rondas: getSheetData(ss, 'Rondas'),
+      spreadsheetName: ss.getName(),
+      lastPulse: new Date().toISOString()
+    };
 
-        const rowData = headers.map(header => {
-          const val = data[header];
-          return val === undefined || val === null ? '' : val;
-        });
-
-        if (rowIndexToUpdate > 0) {
-          sheet.getRange(rowIndexToUpdate, 1, 1, rowData.length).setValues([rowData]);
-        } else {
-          sheet.appendRow(rowData);
-        }
-        
-        return responseJSON({ status: 'success', action: 'saved', data: data });
-      } else if (postData.action === 'delete') {
-         const type = postData.type;
-         const id = postData.id;
-         let sheetName = getSheetNameByType(type);
-         const sheet = ss.getSheetByName(sheetName);
-         if (!sheet) throw new Error(`Tabla no encontrada: ${sheetName}`);
-         
-         const allValues = sheet.getDataRange().getValues();
-         let rowIndexToDelete = -1;
-         
-         for (let i = 1; i < allValues.length; i++) {
-           const rowId = allValues[i][0];
-           if (String(rowId) === String(id)) {
-             rowIndexToDelete = i + 1;
-             break;
-           }
-         }
-         
-         if (rowIndexToDelete > 0) {
-           sheet.deleteRow(rowIndexToDelete);
-           return responseJSON({ status: 'success', action: 'deleted', id: id });
-         } else {
-           return responseJSON({ status: 'error', message: 'ID no encontrado' });
-         }
-      }
-    }
-
-    const proyectos = getSheetData(ss, 'Proyectos');
-    const unidades = getSheetData(ss, 'Unidades');
-    const rondas = getSheetData(ss, 'Rondas');
-
-    return responseJSON({
-      status: 'success',
-      data: {
-        proyectos: proyectos,
-        unidades: unidades,
-        rondas: rondas,
-        spreadsheetUrl: ss.getUrl(),
-        spreadsheetName: ss.getName(),
-        spreadsheetId: ss.getId(),
-        scriptVersion: '2.1'
-      }
-    });
+    return responseJSON({ status: 'success', data: data });
 
   } catch (err) {
     return responseJSON({ status: 'error', message: err.toString() });
-  } finally {
-    lock.releaseLock();
   }
 }
 
-function getSheetNameByType(type) {
-  if (type === 'proyecto') return 'Proyectos';
-  if (type === 'unidad') return 'Unidades';
-  if (type === 'ronda') return 'Rondas';
-  return '';
-}
-
-function ensureDbStructure(ss) {
-  Object.keys(DB_SCHEMA).forEach(sheetName => {
-    let sheet = ss.getSheetByName(sheetName);
-    if (!sheet) sheet = ss.insertSheet(sheetName);
-    if (sheet.getLastRow() === 0) {
-      sheet.appendRow(DB_SCHEMA[sheetName]);
-      sheet.setFrozenRows(1);
-    }
+function getSheetData(ss, name) {
+  const sheet = ss.getSheetByName(name);
+  if (!sheet) return [];
+  const values = sheet.getDataRange().getValues();
+  if (values.length < 2) return [];
+  const headers = values[0];
+  return values.slice(1).map(row => {
+    const obj = {};
+    headers.forEach((h, i) => {
+      if (!h) return;
+      // Normalizamos la cabecera: sin acentos y en MAYÚSCULAS para el JSON de la App
+      const cleanKey = String(h).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+      obj[cleanKey] = row[i];
+      // Mantenemos la original también por compatibilidad
+      obj[h] = row[i];
+    });
+    return obj;
   });
 }
 
-function getSheetData(ss, sheetName) {
-  const sheet = ss.getSheetByName(sheetName);
-  if (!sheet) return [];
-  const range = sheet.getDataRange();
-  const values = range.getValues();
-  if (values.length < 2) return [];
-  const headers = values[0];
-  const data = [];
-  for (let i = 1; i < values.length; i++) {
-    const row = values[i];
-    const obj = {};
-    if (row[0] === '' || row[0] === null) continue;
-    for (let j = 0; j < headers.length; j++) {
-      obj[headers[j]] = row[j];
+function saveData(ss, type, data) {
+  const sheetName = type === 'proyecto' ? 'Proyectos' : type === 'unidad' ? 'Unidades' : 'Rondas';
+  let sheet = ss.getSheetByName(sheetName);
+  if (!sheet) return responseJSON({ status: 'error', message: 'Hoja no encontrada: ' + sheetName });
+  
+  const rows = sheet.getDataRange().getValues();
+  const headers = rows[0];
+  
+  // Determinamos el ID para buscar si es una actualización
+  const primaryKey = headers[0];
+  const idValue = String(data[primaryKey] || data['ID_PROYECTO'] || data['ID_UNIDAD'] || data['ID_RONDA'] || "");
+  
+  let rowIndex = -1;
+  if (idValue) {
+    for (let i = 1; i < rows.length; i++) {
+      if (String(rows[i][0]) === idValue) {
+        rowIndex = i + 1;
+        break;
+      }
     }
-    data.push(obj);
   }
-  return data;
+
+  // Preparamos la fila mapeando cada cabecera del Excel con el JSON recibido
+  const rowData = headers.map(h => {
+    if (!h) return "";
+    const cleanHeader = String(h).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+    
+    // Intentamos encontrar el valor en el orden de prioridad: Exacto -> Normalizado
+    if (data[h] !== undefined) return data[h];
+    if (data[cleanHeader] !== undefined) return data[cleanHeader];
+    
+    return "";
+  });
+
+  if (rowIndex > 0) {
+    sheet.getRange(rowIndex, 1, 1, rowData.length).setValues([rowData]);
+  } else {
+    sheet.appendRow(rowData);
+  }
+  return responseJSON({ status: 'success' });
 }
 
-function responseJSON(data) {
-  return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
+function deleteData(ss, type, id) {
+  const sheetName = type === 'proyecto' ? 'Proyectos' : type === 'unidad' ? 'Unidades' : 'Rondas';
+  const sheet = ss.getSheetByName(sheetName);
+  if (!sheet) return responseJSON({ status: 'error' });
+  const rows = sheet.getDataRange().getValues();
+  for (let i = rows.length - 1; i >= 1; i--) {
+    if (String(rows[i][0]) === String(id)) sheet.deleteRow(i + 1);
+  }
+  return responseJSON({ status: 'success' });
+}
+
+function responseJSON(d) {
+  return ContentService.createTextOutput(JSON.stringify(d)).setMimeType(ContentService.MimeType.JSON);
 }

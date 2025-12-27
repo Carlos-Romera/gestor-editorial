@@ -45,12 +45,12 @@ export interface Ronda {
   ID_RONDA: string;
   ID_UNIDAD: string;
   TIPO_RONDA: string;
-  CATEGORIA: string;
-  FECHA_RECEPCION: string;
+  FECHA_RECEP: string;
   FECHA_LIMITE: string;
   ESTADO: string;
-  ENLACE_ARCHIVO: string;
+  ENLACE_ARCH: string;
   COMENTARIOS: string;
+  CATEGORIA: string; // Estandarizado sin acento
 }
 
 export interface AppData {
@@ -60,7 +60,7 @@ export interface AppData {
   spreadsheetUrl?: string;
   spreadsheetName?: string;
   spreadsheetId?: string;
-  lastUpdated?: string; // Nuevo: rastreo de sincronización
+  lastUpdated?: string;
 }
 
 export interface ApiConfig {
