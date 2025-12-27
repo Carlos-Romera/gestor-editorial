@@ -3,3 +3,6 @@ export const GOOGLE_SCRIPT_URL: string = "https://script.google.com/macros/s/AKf
 export const IS_DEMO_MODE = false; 
 export const DEFAULT_DEADLINE_DAYS = 3;
 export const APP_VERSION = "4.0.0-GOLD";
+console.log("APP_VERSION", APP_VERSION);
+
+
