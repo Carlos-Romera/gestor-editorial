@@ -14,6 +14,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onRefresh }) => {
     : '---';
 
   const getUnidad = (id: any) => data.unidades.find(u => String(u.ID_UNIDAD) === String(id));
+  const getProyecto = (id: any) => data.proyectos.find(p => String(p.ID_PROYECTO) === String(id));
   
   const activeRounds = (data.rondas || [])
     .filter(r => String(r.ESTADO).toUpperCase() !== 'ENTREGADA' && getUnidad(r.ID_UNIDAD))
@@ -67,7 +68,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onRefresh }) => {
           <table className="w-full text-left">
             <thead>
               <tr className="text-[10px] font-black text-app-text-sub uppercase tracking-widest opacity-50">
-                <th className="px-8 py-6">Fecha</th>
+                <th className="px-8 py-6">Fecha Límite</th>
+                <th className="px-8 py-6">Proyecto</th>
                 <th className="px-8 py-6">Unidad</th>
                 <th className="px-8 py-6">Fase</th>
                 <th className="px-8 py-6 text-right">Estado</th>
@@ -76,17 +78,28 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onRefresh }) => {
             <tbody className="divide-y divide-app-bg">
               {activeRounds.map(r => {
                 const ud = getUnidad(r.ID_UNIDAD);
+                const proj = ud ? getProyecto(ud.ID_PROYECTO) : null;
+                
                 return (
                   <tr key={r.ID_RONDA} className="group hover:bg-app-bg/30 transition-colors">
-                    <td className="px-8 py-8 font-bold text-app-text-main text-sm">{new Date(r.FECHA_LIMITE).toLocaleDateString()}</td>
+                    <td className="px-8 py-8 font-bold text-app-text-main text-sm">
+                      {r.FECHA_LIMITE ? new Date(r.FECHA_LIMITE).toLocaleDateString() : '---'}
+                    </td>
+                    <td className="px-8 py-8">
+                      <div className="font-bold text-app-text-main text-xs truncate max-w-[200px]">
+                        {proj?.NOMBRE_PROYECTO || 'Desconocido'}
+                      </div>
+                      <div className="text-[9px] font-black text-app-text-sub uppercase tracking-widest">{proj?.CLIENTE || ''}</div>
+                    </td>
                     <td className="px-8 py-8">
                       <div className="font-black text-app-primary text-xs uppercase">{ud?.CODIGO_UD || '---'}</div>
+                      <div className="text-[9px] text-app-text-sub truncate max-w-[150px]">{ud?.TITULO_UD || ''}</div>
                     </td>
                     <td className="px-8 py-8">
                       <span className="text-[10px] font-black uppercase bg-app-bg px-3 py-1.5 rounded-lg text-app-text-sub">{r.TIPO_RONDA}</span>
                     </td>
                     <td className="px-8 py-8 text-right">
-                      <span className={`text-[10px] font-black uppercase px-4 py-2 rounded-xl ${
+                      <span className={`text-[10px] font-black uppercase px-4 py-2 rounded-xl inline-block min-w-[100px] text-center ${
                         r.ESTADO === 'En Proceso' ? 'bg-app-primary text-white' : 'bg-app-yellow-bg text-app-yellow-text'
                       }`}>
                         {r.ESTADO}
@@ -95,6 +108,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onRefresh }) => {
                   </tr>
                 );
               })}
+              {activeRounds.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-8 py-20 text-center text-[10px] font-black uppercase text-app-text-sub opacity-30 tracking-[0.3em]">
+                    No hay actividades pendientes en la nube
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
