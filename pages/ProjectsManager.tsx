@@ -83,6 +83,18 @@ export const ProjectsManager: React.FC<ProjectsManagerProps> = ({ data, onUpdate
     setRoundModalOpen(true);
   };
 
+  // Lógica para determinar la fase más avanzada (última modificación conceptual)
+  const getLatestRound = (rounds: Ronda[]) => {
+    if (rounds.length === 0) return null;
+    const priority: Record<string, number> = {
+      'Finales': 4,
+      'Terceras': 3,
+      'Segundas': 2,
+      'Primeras': 1
+    };
+    return [...rounds].sort((a, b) => (priority[b.TIPO_RONDA] || 0) - (priority[a.TIPO_RONDA] || 0))[0];
+  };
+
   if (selectedProject) {
     const units = data.unidades
       .filter(u => u.ID_PROYECTO === selectedProject.ID_PROYECTO)
@@ -102,31 +114,52 @@ export const ProjectsManager: React.FC<ProjectsManagerProps> = ({ data, onUpdate
         <div className="space-y-4">
           {units.map(unit => {
             const rounds = data.rondas.filter(r => r.ID_UNIDAD === unit.ID_UNIDAD);
+            const latestRound = getLatestRound(rounds);
             const isExpanded = expandedUnits.has(unit.ID_UNIDAD);
 
             return (
               <div key={unit.ID_UNIDAD} className="bg-white rounded-[2rem] border border-app-text-sub/5 overflow-hidden shadow-sm">
-                <div className={`p-6 flex items-center justify-between cursor-pointer hover:bg-app-bg/10 transition-colors ${isExpanded ? 'bg-app-bg/20' : ''}`} onClick={() => toggleUnit(unit.ID_UNIDAD)}>
-                  <div className="flex items-center gap-6">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${isExpanded ? 'bg-app-primary text-white' : 'bg-app-bg text-app-text-sub'}`}>
+                <div className={`p-6 flex items-center cursor-pointer hover:bg-app-bg/10 transition-colors ${isExpanded ? 'bg-app-bg/20' : ''}`} onClick={() => toggleUnit(unit.ID_UNIDAD)}>
+                  
+                  {/* BLOQUE IZQUIERDA: Info Unidad */}
+                  <div className="flex items-center gap-6 flex-1 min-w-0">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${isExpanded ? 'bg-app-primary text-white' : 'bg-app-bg text-app-text-sub'}`}>
                        <svg className={`w-3.5 h-3.5 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M19 9l-7 7-7-7" /></svg>
                     </div>
-                    <div>
-                      <h4 className="font-bold text-app-text-main text-lg tracking-tight">{unit.CODIGO_UD}</h4>
-                      <p className="text-[9px] text-app-text-sub font-black uppercase tracking-widest">{unit.TITULO_UD || 'Sin título'}</p>
+                    <div className="truncate">
+                      <h4 className="font-bold text-app-text-main text-lg tracking-tight truncate">{unit.CODIGO_UD}</h4>
+                      <p className="text-[9px] text-app-text-sub font-black uppercase tracking-widest truncate">{unit.TITULO_UD || 'Sin título'}</p>
                     </div>
                   </div>
-                  <div className="flex gap-2">
+
+                  {/* BLOQUE CENTRAL: Estado / Última modificación */}
+                  <div className="hidden md:flex flex-1 justify-center items-center">
+                    {latestRound ? (
+                      <div className={`flex items-center gap-2.5 px-5 py-2 rounded-2xl text-[10px] font-black uppercase tracking-[0.15em] border transition-all ${
+                        latestRound.ESTADO === 'Entregada' ? 'bg-app-green/5 text-app-green border-app-green/20' :
+                        latestRound.ESTADO === 'En Proceso' ? 'bg-app-primary/5 text-app-primary border-app-primary/20' :
+                        'bg-app-yellow-bg/40 text-app-yellow-text border-app-yellow-text/20'
+                      }`}>
+                        <span className="opacity-40">{latestRound.TIPO_RONDA}:</span>
+                        <span className="whitespace-nowrap">{latestRound.ESTADO}</span>
+                      </div>
+                    ) : (
+                      <span className="text-[9px] font-black uppercase tracking-widest text-app-text-sub opacity-20 px-4 py-2 border border-dashed border-app-text-sub/20 rounded-xl">Sin Fases Activas</span>
+                    )}
+                  </div>
+
+                  {/* BLOQUE DERECHA: Acciones */}
+                  <div className="flex gap-3 items-center flex-1 justify-end">
                      <button 
                        onClick={(e) => { e.stopPropagation(); openEditUnit(unit); }} 
-                       className="p-3 bg-app-bg text-app-text-sub hover:text-app-primary rounded-xl transition-all"
+                       className="p-3 bg-app-bg text-app-text-sub hover:text-app-primary rounded-xl transition-all group/btn"
                        title="Editar Unidad"
                      >
-                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                       <svg className="w-4 h-4 transition-transform group-hover/btn:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                      </button>
                      <button 
                        onClick={(e) => { e.stopPropagation(); setRoundForm({ID_UNIDAD: unit.ID_UNIDAD, ESTADO: 'Pendiente', CATEGORIA: 'Mayor'}); setRoundModalOpen(true); }} 
-                       className="bg-app-bg text-app-primary px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border border-app-primary/5 hover:bg-app-primary hover:text-white transition-all"
+                       className="bg-app-bg text-app-primary px-5 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest border border-app-primary/5 hover:bg-app-primary hover:text-white transition-all shadow-sm"
                      >
                        Nueva Fase
                      </button>
@@ -139,7 +172,7 @@ export const ProjectsManager: React.FC<ProjectsManagerProps> = ({ data, onUpdate
                       <p className="text-center py-8 text-[10px] font-black uppercase text-app-text-sub opacity-30">No hay fases registradas</p>
                     ) : (
                       <div className="space-y-3">
-                        {rounds.map(r => (
+                        {[...rounds].sort((a,b) => (priorityOrder[b.TIPO_RONDA] || 0) - (priorityOrder[a.TIPO_RONDA] || 0)).map(r => (
                           <div 
                             key={r.ID_RONDA} 
                             onClick={() => openEditRound(r)}
@@ -319,4 +352,11 @@ export const ProjectsManager: React.FC<ProjectsManagerProps> = ({ data, onUpdate
       </Modal>
     </div>
   );
+};
+
+const priorityOrder: Record<string, number> = {
+  'Finales': 4,
+  'Terceras': 3,
+  'Segundas': 2,
+  'Primeras': 1
 };
