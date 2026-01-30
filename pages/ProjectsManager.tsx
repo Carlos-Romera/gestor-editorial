@@ -87,7 +87,8 @@ export const ProjectsManager: React.FC<ProjectsManagerProps> = ({ data, onUpdate
   const getLatestRound = (rounds: Ronda[]) => {
     if (rounds.length === 0) return null;
     const priority: Record<string, number> = {
-      'Finales': 4,
+      'Finales': 5,
+      'Terceras ortográficas': 4,
       'Terceras': 3,
       'Segundas': 2,
       'Primeras': 1
@@ -245,6 +246,7 @@ export const ProjectsManager: React.FC<ProjectsManagerProps> = ({ data, onUpdate
                   <option value="Primeras">Primeras</option>
                   <option value="Segundas">Segundas</option>
                   <option value="Terceras">Terceras</option>
+                  <option value="Terceras ortográficas">Terceras ortográficas</option>
                   <option value="Finales">Finales</option>
                 </select>
               </div>
@@ -355,7 +357,8 @@ export const ProjectsManager: React.FC<ProjectsManagerProps> = ({ data, onUpdate
 };
 
 const priorityOrder: Record<string, number> = {
-  'Finales': 4,
+  'Finales': 5,
+  'Terceras ortográficas': 4,
   'Terceras': 3,
   'Segundas': 2,
   'Primeras': 1

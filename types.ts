@@ -15,6 +15,7 @@ export enum TipoRonda {
   PRIMERAS = 'Primeras',
   SEGUNDAS = 'Segundas',
   TERCERAS = 'Terceras',
+  TERCERAS_ORTOGRAFICAS = 'Terceras ortográficas',
   FINALES = 'Finales'
 }
 
